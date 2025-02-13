@@ -1,18 +1,17 @@
-import { useState } from 'react'
+
+import { Routes, Route } from 'react-router'
 import './App.css'
-import { createBrowserRouter } from 'react-router';
+import Landing from './components/Landing'
+import Signup from './components/Signup'
 
-
-// const router = createBrowserRouter([{
-
-// }])
 
 const App = () => {
 
   return (
-
-    <>
-    </>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/signup" element={<Signup />} />
+    </Routes>
   )
 }
 

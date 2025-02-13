@@ -2,9 +2,11 @@ package utils
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -37,7 +39,7 @@ func HashPassword(password string, ap *argonParams) (encodedHash string, err err
 	b64Salt := base64.RawStdEncoding.Strict().EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.Strict().EncodeToString(hash)
 
-	encodedHash = fmt.Sprintf("$argon2id$v=%d$m=%d,$t=%d,$p=%d,$%s$%s",
+	encodedHash = fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
 		argon2.Version, ap.memory, ap.iterations, ap.parallelism, b64Salt, b64Hash)
 
 	return encodedHash, nil
@@ -56,6 +58,7 @@ func GenerateRandomBytes(saltLength uint32) ([]byte, error) {
 func DecodeHash(encodedHash string) (ap *argonParams, salt, hash []byte, err error) {
 	vals := strings.Split(encodedHash, "$")
 	if len(vals) != 6 {
+		log.Println("invalid decoded hash: ", vals)
 		return nil, nil, nil, errors.New("invalid hash")
 	}
 
@@ -87,4 +90,21 @@ func DecodeHash(encodedHash string) (ap *argonParams, salt, hash []byte, err err
 	ap.keyLength = uint32(len(hash))
 
 	return ap, salt, hash, nil
+}
+
+func VerifyPassword(password, encodedHash string) (bool, error) {
+
+	ap, salt, hash, err := DecodeHash(encodedHash)
+	if err != nil {
+		return false, err
+	}
+
+	passwordAttempt := argon2.IDKey([]byte(password), salt, ap.iterations, ap.memory,
+		ap.parallelism, ap.keyLength)
+
+	if subtle.ConstantTimeCompare(passwordAttempt, hash) == 1 {
+		return true, nil
+	}
+
+	return false, nil
 }

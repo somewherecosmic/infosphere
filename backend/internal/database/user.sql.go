@@ -21,6 +21,24 @@ type CreateUserParams struct {
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.ExecContext(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
+	_, err := q.db.Exec(ctx, createUser, arg.Username, arg.Email, arg.PasswordHash)
 	return err
+}
+
+const findUserByHandle = `-- name: FindUserByHandle :one
+SELECT username, email, password_hash FROM users
+WHERE email = $1 OR username = $1
+`
+
+type FindUserByHandleRow struct {
+	Username     string
+	Email        string
+	PasswordHash string
+}
+
+func (q *Queries) FindUserByHandle(ctx context.Context, email string) (FindUserByHandleRow, error) {
+	row := q.db.QueryRow(ctx, findUserByHandle, email)
+	var i FindUserByHandleRow
+	err := row.Scan(&i.Username, &i.Email, &i.PasswordHash)
+	return i, err
 }
